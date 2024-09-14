@@ -1,3 +1,6 @@
+# Figures
+figures/*
+
 # Data
 data
 *.rds
