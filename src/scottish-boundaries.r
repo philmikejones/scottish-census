@@ -2,6 +2,7 @@ library("assertthat")
 library("dplyr")
 library("sf")
 library("ggplot2")
+library("forcats")
 
 ca = sf::read_sf("data/scotland_ca_2019.shp")
 ca = rmapshaper::ms_simplify(ca, keep = 0.05)
@@ -38,8 +39,17 @@ ca = left_join(ca, ethnic, by = c("geoid" = "council"))
 
 ca =
     ca |>
-    mutate(`% White Irish` = (irish / total) * 100)
+    mutate(per_irish = (irish / total) * 100) |>
+    mutate(`% White Irish` = "Less than 0.75%") |>
+    mutate(
+        `% White Irish` = if_else(per_irish > 0.75, "0.75% and above", `% White Irish`),
+        `% White Irish` = if_else(per_irish > 1.0, "1.0% and above", `% White Irish`),
+        `% White Irish` = if_else(per_irish > 1.5, "1.5% and above", `% White Irish`),
+    )
+
+ca[["% White Irish"]] = fct_relevel(ca[["% White Irish"]], "Less than 0.75%", "0.75% and above", "1.0% and above", "1.5% and above")
 
 map = ggplot(data = ca) +
-    geom_sf(aes(fill = `% White Irish`))
+    geom_sf(aes(fill = `% White Irish`)) +
+    scale_fill_manual(values = c("#ffffcc", "#c2e699", "#78c679", "#238443"))
 ggsave("figures/scot-ca-irish.pdf", map, width = 210, height = 297, units = "mm", dpi = 300)
